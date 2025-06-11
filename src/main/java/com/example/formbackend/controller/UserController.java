@@ -42,4 +42,13 @@ public class UserController {
             .toList();
         return ResponseEntity.ok(users);
     }
+
+    @GetMapping("/customers")
+    public ResponseEntity<java.util.List<UserDTO>> getAllCustomers() {
+        java.util.List<UserDTO> customers = userService.getAllUsers().stream()
+            .filter(user -> user.getRole() != null && user.getRole().equals("CUSTOMER"))
+            .map(UserDTO::new)
+            .toList();
+        return ResponseEntity.ok(customers);
+    }
 }

@@ -24,9 +24,7 @@ public UserDetails loadUserByUsername(String email) throws UsernameNotFoundExcep
     User user = userRepository.findByEmail(email)
         .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-    if (!user.isEmailVerified()) {
-        throw new UsernameNotFoundException("Email not verified");
-    }
+    // Removed email verification check to allow login without verification
 
     List<GrantedAuthority> authorities = List.of(
         new SimpleGrantedAuthority("ROLE_" + user.getRole().name()) // e.g., ROLE_CUSTOMER
