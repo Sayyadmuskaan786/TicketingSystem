@@ -82,4 +82,11 @@ public class CommentDTO {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public String getUserRole() {
+        return userRole;
+    }
+    public void setUserRole(String userRole) {
+        this.userRole = userRole;
+    }
 }

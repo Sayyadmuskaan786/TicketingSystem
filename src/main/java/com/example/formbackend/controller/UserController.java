@@ -24,6 +24,14 @@ public class UserController {
         return ResponseEntity.ok(agents);
     }
 
+
+      @GetMapping("/customers")
+    public ResponseEntity<java.util.List<UserDTO>> getAllCustomers() {
+        java.util.List<UserDTO> customers = userService.getAllCustomers().stream()
+            .map(UserDTO::new)
+            .toList();
+        return ResponseEntity.ok(customers);
+    }
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         Optional<User> userOptional = userService.getUserById(id);
@@ -43,12 +51,12 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping("/customers")
-    public ResponseEntity<java.util.List<UserDTO>> getAllCustomers() {
-        java.util.List<UserDTO> customers = userService.getAllUsers().stream()
-            .filter(user -> user.getRole() != null && user.getRole().equals("CUSTOMER"))
-            .map(UserDTO::new)
-            .toList();
-        return ResponseEntity.ok(customers);
-    }
+    // @GetMapping("/customers")
+    // public ResponseEntity<java.util.List<UserDTO>> getAllCustomers() {
+    //     java.util.List<UserDTO> customers = userService.getAllUsers().stream()
+    //         .filter(user -> user.getRole() != null && user.getRole().equals("CUSTOMER"))
+    //         .map(UserDTO::new)
+    //         .toList();
+    //     return ResponseEntity.ok(customers);
+    // }
 }

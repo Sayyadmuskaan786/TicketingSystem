@@ -10,14 +10,23 @@ public class TicketDTO {
     private Ticket.State state;
     private UserDTO assignedAgent;
     private UserDTO createdBy;
-
-    public TicketDTO(Ticket ticket) {
+    private String createdAt;
+    private String closedAt;
+    private String opendedAt;
+        public TicketDTO(Ticket ticket) {
         this.id = ticket.getId();
         this.title = ticket.getTitle();
         this.description = ticket.getDescription();
         this.state = ticket.getState();
         this.assignedAgent = ticket.getAssignedAgent() != null ? new UserDTO(ticket.getAssignedAgent()) : null;
-        this.createdBy = ticket.getCreatedBy() != null ? new UserDTO(ticket.getCreatedBy()) : null;
+        if (ticket.getCreatedBy() != null) {
+            this.createdBy = new UserDTO(ticket.getCreatedBy());
+        } else {
+            System.out.println("Warning: Ticket id " + ticket.getId() + " has null createdBy");
+            this.createdBy = null;
+        }
+        this.createdAt = ticket.getCreatedAt() != null ? ticket.getCreatedAt().toString() : null;
+        this.closedAt = ticket.getClosedAt() != null ? ticket.getClosedAt().toString() : null;
     }
 
     // Getters and setters
@@ -68,5 +77,13 @@ public class TicketDTO {
 
     public void setCreatedBy(UserDTO createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 }

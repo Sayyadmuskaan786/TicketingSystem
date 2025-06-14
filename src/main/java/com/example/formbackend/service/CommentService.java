@@ -17,10 +17,14 @@ public class CommentService {
     private CommentRepository commentRepository;
 
     public List<Comment> getCommentsByTicket(Ticket ticket) {
-        return commentRepository.findByTicket(ticket);
+       return commentRepository.findByTicket(ticket);
     }
 
     public Comment addComment(Comment comment) {
+        // Set userRole from user before saving
+        if (comment.getUser() != null) {
+            comment.setUserRole(comment.getUser().getRole());
+        }
         return commentRepository.save(comment);
     }
 
@@ -36,9 +40,24 @@ public class CommentService {
         return commentRepository.save(existingComment);
     }
 
+
     public void deleteComment(Long id) {
         commentRepository.deleteById(id);
     }
+
+    public List<Comment> getCommentsByTicketOrderByCreatedAtAsc(Ticket ticket) {
+         List<Comment> comments = commentRepository.findCommentsByTicketOrderByCreatedAtAsc(ticket);
+        comments.sort((c1, c2) -> c1.getCreatedAt().compareTo(c2.getCreatedAt()));
+        return comments;
+    }
+
+    public List<CommentDTO> getCommentDTOsByTicketOrderByCreatedAtAsc(Ticket ticket) {
+        return commentRepository.findCommentsByTicketOrderByCreatedAtAsc(ticket).stream()
+                .map(CommentDTO::new)
+                .toList();
+    }
+
+   
 
     // public List<CommentDTO> getAllCommentDTOs() {
     //     return commentRepository.findAll().stream()

@@ -2,13 +2,20 @@ package com.example.formbackend.service;
 
 import com.example.formbackend.model.User;
 import com.example.formbackend.model.EmailVerificationToken;
+import com.example.formbackend.model.PendingUser;
 import com.example.formbackend.repository.UserRepository;
 import com.example.formbackend.repository.EmailVerificationTokenRepository;
 import com.example.formbackend.repository.PasswordResetTokenRepository;
+import com.example.formbackend.repository.PendingUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailSender;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.formbackend.model.Role;
+import org.springframework.mail.javamail.JavaMailSender;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +36,12 @@ public class UserService {
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+     @Autowired
+    private JavaMailSender mailSender;
+
+    @Autowired
+    private PendingUserRepository pendingUserRepository;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -52,33 +65,31 @@ public class UserService {
         return userRepository.findByEmail(username).orElse(null);
     }
 
-    public User registerUser(User user) throws IllegalArgumentException {
-        if(userRepository.existsByEmail(user.getEmail())){
-            throw new IllegalArgumentException("Email Already Exists");
-        }
-        // Convert role string to uppercase enum if role is set as string
-        if (user.getRole() != null) {
-            try {
-                user.setRole(Role.valueOf(user.getRole().name().toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid role for registration");
-            }
-        } else {
-            user.setRole(Role.CUSTOMER);
-        }
-        // Validate role: only CUSTOMER or AGENT allowed
-        if (user.getRole() != Role.CUSTOMER && user.getRole() != Role.AGENT) {
-            throw new IllegalArgumentException("Invalid role for registration");
-        }
-        // Set emailVerified to false initially
-        user.setEmailVerified(false);
-        // Hash the password before saving
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        User savedUser = userRepository.save(user);
-        // Create and send verification token
-        createVerificationToken(savedUser);
-        return savedUser;
-    }
+    // public User registerUser(User user) throws IllegalArgumentException {
+    //     if(userRepository.existsByEmail(user.getEmail())){
+    //         throw new IllegalArgumentException("Email Already Exists");
+    //     }
+    //     // Convert role string to uppercase enum if role is set as string
+    //     if (user.getRole() != null) {
+    //         try {
+    //             user.setRole(Role.valueOf(user.getRole().name().toUpperCase()));
+    //         } catch (IllegalArgumentException e) {
+    //             throw new IllegalArgumentException("Invalid role for registration");
+    //         }
+    //     } else {
+    //         user.setRole(Role.CUSTOMER);
+    //     }
+    //     // Validate role: only CUSTOMER or AGENT allowed
+    //     if (user.getRole() != Role.CUSTOMER && user.getRole() != Role.AGENT) {
+    //         throw new IllegalArgumentException("Invalid role for registration");
+    //     }
+    //     // Hash the password before saving
+    //     user.setPassword(passwordEncoder.encode(user.getPassword()));
+    //     User savedUser = userRepository.save(user);
+    //     // Create and send verification token
+    //     createVerificationToken(savedUser);
+    //     return savedUser;
+    // }
 
     public void createVerificationToken(User user) {
         EmailVerificationToken token = new EmailVerificationToken(user);
@@ -117,4 +128,64 @@ public class UserService {
     public List<User> getAllAgents() {
         return userRepository.findAllAgents();
     }
+
+    public List<User> getAllCustomers(){
+        return userRepository.findAllCustomers();
+    }
+
+    public String registerUser(User user) {
+        // Check if already registered
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            return "Email already registered and verified.";
+        }
+        if (pendingUserRepository.findByEmail(user.getEmail()).isPresent()) {
+            return "Registration already pending for this email.";
+        }
+        // Hash password
+        String hashedPassword = passwordEncoder.encode(user.getPassword());
+        String otp = generateOtp();
+        PendingUser pending = new PendingUser();
+        pending.setEmail(user.getEmail());
+        pending.setUsername(user.getUsername());
+        pending.setPassword(hashedPassword);
+        pending.setRole(user.getRole() != null ? user.getRole().name() : "CUSTOMER");
+        pending.setOtp(otp);
+        pending.setOtpGeneratedTime(LocalDateTime.now());
+        pendingUserRepository.save(pending);
+        sendOtpEmail(user.getEmail(), otp);
+        return "OTP sent to email.";
+    }
+
+    private void sendOtpEmail(String toEmail, String otp) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Verify your email with OTP");
+        message.setText("Your OTP for registration is: " + otp + "\nIt will expire in 5 minutes.");
+        mailSender.send(message);
+    }
+
+    public String verifyOtp(String email, String otp) {
+        Optional<PendingUser> pendingOpt = pendingUserRepository.findByEmail(email);
+        if (pendingOpt.isEmpty()) return "No pending registration for this email.";
+        PendingUser pending = pendingOpt.get();
+        if (!pending.getOtp().equals(otp)) return "Invalid OTP.";
+        if (pending.getOtpGeneratedTime().plusMinutes(10).isBefore(LocalDateTime.now()))
+            return "OTP expired.";
+        // Create user
+        User user = new User();
+        user.setEmail(pending.getEmail());
+        user.setUsername(pending.getUsername());
+        user.setPassword(pending.getPassword());
+        user.setRole(Role.valueOf(pending.getRole()));
+        userRepository.save(user);
+        pendingUserRepository.delete(pending);
+        return "Verification successful.";
+    }
+
+    private String generateOtp() {
+        return String.valueOf((int)(Math.random() * 900000) + 100000); // 6-digit OTP
+    }
 }
+
+
+

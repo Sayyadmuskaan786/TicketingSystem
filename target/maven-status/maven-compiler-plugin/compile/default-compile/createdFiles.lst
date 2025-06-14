@@ -7,6 +7,7 @@ com/example/formbackend/model/PasswordResetToken.class
 com/example/formbackend/dto/UserDTO.class
 com/example/formbackend/dto/CommentDTO.class
 com/example/formbackend/service/EmailSenderService.class
+com/example/formbackend/repository/EmailVerificationTokenRepository.class
 com/example/formbackend/controller/CommentController.class
 com/example/formbackend/service/CommentService.class
 com/example/formbackend/controller/UserController.class
@@ -26,6 +27,7 @@ com/example/formbackend/model/User.class
 com/example/formbackend/controller/AuthController.class
 com/example/formbackend/security/JwtUtil.class
 com/example/formbackend/model/Ticket$State.class
+com/example/formbackend/model/EmailVerificationToken.class
 com/example/formbackend/exception/GlobalExceptionHandler.class
 com/example/formbackend/service/UserService.class
 com/example/formbackend/payload/LoginResponse.class

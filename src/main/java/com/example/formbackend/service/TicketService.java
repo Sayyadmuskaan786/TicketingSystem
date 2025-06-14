@@ -25,7 +25,7 @@ public class TicketService {
     private EmailSenderService emailSenderService;
 
     public List<Ticket> getAllTickets() {
-        return ticketRepository.findAll();
+        return ticketRepository.findAllWithAgents();
     }
 
     public Optional<Ticket> getTicketById(Long id) {
@@ -44,16 +44,32 @@ public class TicketService {
         return ticketRepository.countTicketsByAgentId(agentId);
     }
 
-    public List<Ticket> getTicketsByState(Ticket.State state) {
-        return ticketRepository.findByState(state);
-    }
+    // // // public List<Ticket> getTicketsByState(Ticket.State state) {
+    //     return ticketRepository.findByState(state);
+    // }
+
+    // public List<Ticket> getTicketsByStateWithCreatedByEager(Ticket.State state) {
+    //     return ticketRepository.findByStateWithCreatedByEager(state);
+    // }
 
     public List<Ticket> getTicketsByCustomerId(Long customerId) {
         return ticketRepository.findByCreatedById(customerId);
     }
 
     public List<Ticket> getTicketsByAgentId(Long agentId) {
-        return ticketRepository.findByAssignedAgentId(agentId);
+        return ticketRepository.findByAssignedAgentIdWithCreatedBy(agentId);
+    }
+
+    public List<Ticket> getAllAssignedTickets() {
+        return ticketRepository.findAllAssignedTickets();
+    }
+
+    public List<Ticket> getAllOpenTickets(){
+        return ticketRepository.findAllOpenTickets();
+    }
+
+    public List<Ticket> getAllClosedTickets(){
+        return ticketRepository.findAllClosedTickets();
     }
 
     public void sendTicketAssignmentEmail(User agent, Ticket ticket) {
@@ -80,5 +96,27 @@ public class TicketService {
 
     public void deleteTicket(Ticket ticket) {
         ticketRepository.delete(ticket);
+    }
+
+    public Ticket createTicketWithAgentAssignment(Ticket ticket) {
+        Long customerId = ticket.getCreatedBy().getId();
+        String title = ticket.getTitle();
+
+        // Find recent solved or closed tickets by the same customer with the same title
+        List<Ticket> recentTickets = ticketRepository.findRecentSolvedOrClosedTicketsByCustomerAndTitle(customerId, title);
+
+        if (!recentTickets.isEmpty()) {
+            // Update the existing ticket's state and assign the same agent
+            Ticket existingTicket = recentTickets.get(0);
+            existingTicket.setState(Ticket.State.OPEN);
+            if (existingTicket.getAssignedAgent() != null) {
+                existingTicket.setAssignedAgent(existingTicket.getAssignedAgent());
+            }
+            return ticketRepository.save(existingTicket);
+        } else {
+            // No recent similar ticket found, create new ticket with OPEN state
+            ticket.setState(Ticket.State.OPEN);
+            return ticketRepository.save(ticket);
+        }
     }
 }

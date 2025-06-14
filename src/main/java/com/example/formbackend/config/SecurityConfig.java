@@ -36,25 +36,32 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors().and()
-            .csrf(csrf -> csrf
+                .csrf(csrf -> csrf
                 .ignoringRequestMatchers(
                     "/api/users/register",
                     "/api/auth/login",
                     "/api/tickets",
                     "/api/tickets/*/assign/*",
-                    "/api/**"
+                    "/api/tickets/*/state",
+                    "/api/tickets/*",  // Added to ignore CSRF for DELETE requests
+                    "/api/auth/register-otp",
+                    "/api/auth/verify-otp",
+                    "/api/comments/*",
+                    "/api/comments/ticket/*"
                 )
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            .authorizeHttpRequests(auth -> auth
+             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(
-                    "/api/auth/**",
-                    "/api/auth/register"
+                    "/api/auth/register-otp",
+                    "/api/auth/verify-otp",
+                    "/api/auth/login"
                 ).permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/tickets").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.DELETE, "/api/tickets/*").hasRole("CUSTOMER")  // Added DELETE permission
                 .requestMatchers(HttpMethod.POST, "/api/comments/*").hasAnyRole("CUSTOMER", "AGENT")
                 .requestMatchers(HttpMethod.POST, "/api/comments/ticket/*").hasAnyRole("CUSTOMER", "AGENT")
                 .requestMatchers(HttpMethod.PUT, "/api/comments/*").hasAnyRole("CUSTOMER", "AGENT")

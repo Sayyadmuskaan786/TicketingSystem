@@ -22,16 +22,20 @@ public class Comment {
     @JoinColumn(name = "author_id")
     private User user;
 
+    @Enumerated(EnumType.STRING)
+    private Role userRole;  // New field to store user role at comment creation
+
     private LocalDateTime createdAt;
 
     public Comment() {
         this.createdAt = LocalDateTime.now();
     }
 
-    public Comment(String content, Ticket ticket, User user) {
+    public Comment(String content, Ticket ticket, User user, Role userRole) {
         this.content = content;
         this.ticket = ticket;
         this.user = user;
+        this.userRole = userRole;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -61,6 +65,14 @@ public class Comment {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Role getUserRole() {
+        return userRole;
+    }
+
+    public void setUserRole(Role userRole) {
+        this.userRole = userRole;
     }
 
     public LocalDateTime getCreatedAt() {

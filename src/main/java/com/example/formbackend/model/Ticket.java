@@ -52,6 +52,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.util.HashSet;
 import java.util.Set;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
@@ -88,8 +91,22 @@ public class Ticket {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    private LocalDateTime closedAt;
+
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Comment> comments = new HashSet<>();
+
+    public LocalDateTime getClosedAt() {
+        return closedAt;
+    }
+
+    public void setClosedAt(LocalDateTime closedAt) {
+        this.closedAt = closedAt;
+    }
 
     public Ticket() {
     }
@@ -143,6 +160,14 @@ public class Ticket {
 
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Set<Comment> getComments() {

@@ -50,9 +50,9 @@ public class TicketController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'CUSTOMER')")
-    public ResponseEntity<Ticket> getTicketById(@PathVariable Long id) {
+    public ResponseEntity<TicketDTO> getTicketById(@PathVariable Long id) {
         Optional<Ticket> ticket = ticketService.getTicketById(id);
-        return ticket.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return ticket.map(t -> ResponseEntity.ok(new TicketDTO(t))).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Temporarily remove role-based authorization to test ticket creation
@@ -65,8 +65,12 @@ public class TicketController {
             User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
             ticket.setCreatedBy(user);
-            ticket.setState(State.OPEN);  // optional: set default
-            Ticket savedTicket = ticketRepository.save(ticket);
+            // Use the new service method to create ticket with agent assignment logic
+            Ticket savedTicket = ticketService.createTicketWithAgentAssignment(ticket);
+            // If assigned agent is set, send assignment email
+            if (savedTicket.getAssignedAgent() != null) {
+                ticketService.sendTicketAssignmentEmail(savedTicket.getAssignedAgent(), savedTicket);
+            }
             return ResponseEntity.ok(savedTicket);
         } catch (Exception e) {
             e.printStackTrace(); // Log the stack trace for debugging
@@ -112,13 +116,17 @@ public class TicketController {
 
     @PutMapping("/{id}/state")
     @PreAuthorize("hasRole('AGENT')")
-    public ResponseEntity<Ticket> updateTicketState(@PathVariable Long id, @RequestParam Ticket.State state) {
+    public ResponseEntity<Ticket> updateTicketState(@PathVariable Long id, @RequestParam Ticket.State state, Authentication authentication) {
+        System.out.println("User " + authentication.getName() + " with roles " + authentication.getAuthorities() + " is attempting to update ticket state to " + state);
         Optional<Ticket> optionalTicket = ticketService.getTicketById(id);
         if (!optionalTicket.isPresent()) {
             return ResponseEntity.notFound().build();
         }
         Ticket ticket = optionalTicket.get();
         ticket.setState(state);
+        if (state == Ticket.State.CLOSED) {
+            ticket.setClosedAt(java.time.LocalDateTime.now());
+        }
         Ticket updatedTicket = ticketService.saveTicket(ticket);
 
         // Send email notification to customer if ticket is SOLVED or CLOSED
@@ -148,28 +156,57 @@ public class TicketController {
         return ResponseEntity.ok(count);
     }
 
-    @GetMapping("/state")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'CUSTOMER')")
-    public List<Ticket> getTicketsByState(@RequestParam Ticket.State state) {
-        return ticketService.getTicketsByState(state);
-    }
+    // @GetMapping("/state")
+    // @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'CUSTOMER')")
+    // public List<Ticket> getTicketsByState(@RequestParam Ticket.State state) {
+    //     return ticketService.getTicketsByState(state);
+    // }
 
     @GetMapping("/customer")
     // @PreAuthorize("hasRole('CUSTOMER')")
-    public List<Ticket> getTicketsByCustomerId() {
+    public List<TicketDTO> getTicketsByCustomerId() {
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userService.getUserByUsername(username);
-        return ticketService.getTicketsByCustomerId(user.getId());
+        return ticketService.getTicketsByCustomerId(user.getId()).stream()
+                .map(TicketDTO::new)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @GetMapping("/assigned")
     @PreAuthorize("hasAnyRole('ADMIN', 'AGENT')")
-    public List<Ticket> getTicketsAssignedToAgent() {
+    public List<TicketDTO> getTicketsAssignedToAgent() {
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userService.getUserByUsername(username);
-        return ticketService.getTicketsByAgentId(user.getId());
+        return ticketService.getTicketsByAgentId(user.getId()).stream()
+                .map(TicketDTO::new)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @GetMapping("/assigned/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<TicketDTO> getAllAssignedTickets() {
+        return ticketService.getAllAssignedTickets().stream()
+                .map(TicketDTO::new)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+
+    @GetMapping("/open")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<TicketDTO> getAllOpenTickets() {
+        return ticketService.getAllOpenTickets().stream()
+                .map(TicketDTO::new)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @GetMapping("/closed")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<TicketDTO> getAllClosedTickets() {
+        return ticketService.getAllClosedTickets().stream()
+                .map(TicketDTO::new)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @DeleteMapping("/{id}")

@@ -61,30 +61,51 @@ public class CommentController {
 
     @GetMapping("/ticket/{ticketId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'CUSTOMER')")
-    public ResponseEntity<List<Comment>> getCommentsByTicket(@PathVariable Long ticketId) {
+    public ResponseEntity<List<CommentDTO>> getCommentsByTicket(@PathVariable Long ticketId) {
         Optional<Ticket> ticket = ticketService.getTicketById(ticketId);
         if (!ticket.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        List<Comment> comments = commentService.getCommentsByTicket(ticket.get());
+        List<CommentDTO> comments = commentService.getCommentDTOsByTicketOrderByCreatedAtAsc(ticket.get());
+        return ResponseEntity.ok(comments);
+    }
+
+    @GetMapping("/ticket/{ticketId}/ordered")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'CUSTOMER')")
+    public ResponseEntity<List<CommentDTO>> getCommentsByTicketOrdered(@PathVariable Long ticketId) {
+        Optional<Ticket> ticket = ticketService.getTicketById(ticketId);
+        if (!ticket.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        List<CommentDTO> comments = commentService.getCommentDTOsByTicketOrderByCreatedAtAsc(ticket.get());
         return ResponseEntity.ok(comments);
     }
 
     @PostMapping("/ticket/{ticketId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'CUSTOMER')")
     public ResponseEntity<?> addComment(@PathVariable Long ticketId, @RequestBody Comment comment, Authentication authentication) {
+        System.out.println("Received addComment request for ticketId: " + ticketId + " by user: " + authentication.getName());
         Optional<Ticket> ticket = ticketService.getTicketById(ticketId);
         if (!ticket.isPresent()) {
+            System.out.println("Ticket not found: " + ticketId);
             return ResponseEntity.notFound().build();
         }
         User user = userService.getUserByUsername(authentication.getName());
         if (user == null) {
+            System.out.println("User not authenticated: " + authentication.getName());
             return ResponseEntity.status(401).body("User not authenticated");
         }
         comment.setTicket(ticket.get());
         comment.setUser(user);
-        Comment savedComment = commentService.addComment(comment);
-        return ResponseEntity.ok(savedComment);
+        try {
+            Comment savedComment = commentService.addComment(comment);
+            System.out.println("Comment saved with id: " + savedComment.getId());
+            // Return CommentDTO instead of raw Comment to include userRole
+            return ResponseEntity.ok(new com.example.formbackend.dto.CommentDTO(savedComment));
+        } catch (Exception e) {
+            System.out.println("Error saving comment: " + e.getMessage());
+            return ResponseEntity.status(500).body("Error saving comment");
+        }
     }
 
     @DeleteMapping("/{id}")

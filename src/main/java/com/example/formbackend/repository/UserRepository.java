@@ -18,4 +18,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.role = com.example.formbackend.model.Role.AGENT")
     List<User> findAllAgents();
+
+    @Query("SELECT u FROM User u WHERE u.role = com.example.formbackend.model.Role.CUSTOMER")
+    List<User> findAllCustomers();
 }

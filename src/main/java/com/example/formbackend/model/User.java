@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,6 +25,7 @@ public class User {
 
     @NotBlank(message = "Email is mandatory")
     @Email(message = "Email should be valid")
+    @Column(unique = true, nullable = false)
     private String email;
 
     @NotBlank(message = "Password is mandatory")
@@ -31,22 +34,22 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+    // @Column(name = "is_enabled", nullable = false)
+    // private boolean isEnabled = false;
+  
 
-    private boolean emailVerified = false;
-
-    public boolean isEmailVerified() {
-        return emailVerified;
-    }
-
-    public void setEmailVerified(boolean emailVerified) {
-        this.emailVerified = emailVerified;
-    }
+    // private String otp;
+    // private LocalDateTime otpGeneratedTime;
 
     @OneToMany(mappedBy = "assignedAgent")
     private Set<Ticket> assignedTickets = new HashSet<>();
 
     @OneToMany(mappedBy = "createdBy")
     private Set<Ticket> createdTickets = new HashSet<>();
+
+    private String resetPasswordToken;
+
+    private LocalDateTime resetPasswordExpires;
 
     public User() {
     }
@@ -56,9 +59,33 @@ public class User {
         this.email = email;
         this.password = password;
         this.role = role;
-        this.emailVerified = false;
+       
+        
     }
 
+    // public void setIsEnabled(boolean isEnabled){
+    //     this.isEnabled = isEnabled;
+    // }
+
+    // public boolean getIsEnabled(){
+    //     return this.isEnabled;
+    // }
+
+    // public void setOtp(String otp) {
+    //     this.otp = otp;
+    // }
+
+    // public String getOtp() {
+    //     return otp;
+    // }
+
+    // public LocalDateTime getOtpGeneratedTime() {
+    //     return otpGeneratedTime;
+    // }
+
+    // public void setOtpGeneratedTime(LocalDateTime otpGeneratedTime){
+    //     this.otpGeneratedTime = otpGeneratedTime;
+    // }
     public Long getId() {
         return id;
     }
@@ -93,5 +120,21 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getResetPasswordToken() {
+        return resetPasswordToken;
+    }
+
+    public void setResetPasswordToken(String resetPasswordToken) {
+        this.resetPasswordToken = resetPasswordToken;
+    }
+
+    public LocalDateTime getResetPasswordExpires() {
+        return resetPasswordExpires;
+    }
+
+    public void setResetPasswordExpires(LocalDateTime resetPasswordExpires) {
+        this.resetPasswordExpires = resetPasswordExpires;
     }
 }
